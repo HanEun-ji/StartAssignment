@@ -1,173 +1,173 @@
 import Foundation
 
-// readline에 왜 백스페이스 들어가지..?
-
-protocol InputManager {
-    static func getContatct()->Contact?
-    static func getMenuInput()->String?
-    static func removeWhiteSpaces(_ input: String)->String
+protocol InputManagable {
+    func toContact(from: String) -> Contact?
 }
 
-protocol ValidityChecker {
-    static func isNameCorrect(name: String) -> String?
-    static func isAgeCorrect(age: String) -> String?
-    static func isNumberCorrect(number: String) -> String?
-    static func isMenuNumberCorrect(menuNumber: String) -> String?
-}
-
-protocol MenuManager {
-    var contacts: [Contact] {get set}
-    func printMenu()
+protocol MenuManagable {
+    func printMenu() -> Bool
     func addContact()
-    func printAllContacts()
+    func printAll(contacts: [Contact])
     func searchContactWithName()
 }
 
-class Contact {
-    let name: String
-    let age: String
-    let number: String
-    init(name: String, age: String, number: String) {
-        self.name = name
-        self.age = age
-        self.number = number
-    }
-}
-
-class InputChecker: ValidityChecker {
-//      static func getValidValue<T>(_ checkFunction: (T) -> T?, _ target: T)-> T {
-//          if let result = checkFunction(target) {
-//              return result
-//          }
-//      }
-    // 이름이 getCorrectName이 되는 것이 맞지 않을까...
-    static func isNameCorrect(name: String) -> String? {
-        if name.contains(" ") {
-            
-        }
-        return name
-    }
-    static func isAgeCorrect(age: String) -> String? {
-        let intAge: Int = Int(age) ?? -1
-        switch intAge{
-        case 0...130:
-            return age
-        default:
-            return nil
-        }
-    }
-    static func isNumberCorrect(number: String) -> String? {
-        let bars = number.filter { ($0) == "-" }.count
-        if bars != 2 {
-            return nil
-        }
-        return number
-    }
-    static func isMenuNumberCorrect(menuNumber: String) -> String? {
-        switch menuNumber{
-        case "1", "2", "3", "x":
-            return menuNumber
-        default:
-            return nil
-        }
-    }
-}
-
-class ContactInputManager: InputManager {
-    static func getContatct()->Contact? {
-        var result: Contact? = nil
-        print("연락처 정보를 입력해주세요 : ", terminator:"")
-        let userInformation: String? = readLine()
-        if let information: String = userInformation {
-            let processedInformation: [String] = information.split(separator: "/").map({ (subString: Substring) -> String in
-                return removeWhiteSpaces(String(subString))
-            })
-            let name = InputChecker.isNameCorrect(name: processedInformation[0])
-            let age = InputChecker.isAgeCorrect(age: processedInformation[1])
-            let number = InputChecker.isNumberCorrect(number: processedInformation[2])
-            if name != nil && age != nil && number != nil {
-                // *** swift-ic??
-                result = Contact(name: name!, age: age!, number: number!)
+struct Contact {
+    var name: String?
+    var age: UInt?
+    var telNumber: String?
+    
+    enum Validity {
+        case valid(Contact), noName, noAge, noTelNumber
+        var output: String {
+            switch self {
+            case .valid(let contact):
+                guard let name = contact.name, let age = contact.age, let telNumber = contact.telNumber else { return "" }
+                return "입력한 정보는 \(age)세 \(name)(\(telNumber))입니다."
+            case .noName:
+                return "입력한 이름 정보가 잘못되었습니다. 입력 형식을 확인해주세요."
+            case .noAge:
+                return "입력한 나이 정보가 잘못되었습니다. 입력 형식을 확인해주세요."
+            case .noTelNumber:
+                return "입력한 전화번호 정보가 잘못되었습니다. 입력 형식을 확인해주세요."
             }
-        } else {
-            print("아무것도 입력되지 않았습니다. 입력 형식을 확인해주세요.")
+        }
+    }
+    
+    init(name: String, age: String, telNumber: String) {
+        if name != "" {
+            self.name = name
+        }
+        self.age = UInt(age) // maxage?
+        self.telNumber = toValid(telNumber: telNumber)
+//        guard name != "", let realAge = UInt(age), let realTelNumber = toValid(telNumber: telNumber) else {
+//            return nil
+//        }
+    }
+    
+    private func toValid(telNumber: String) -> String? {
+        let bars = telNumber.filter { ($0) == "-" }.count
+        if bars != 2 || telNumber.count<10 {
             return nil
         }
-        switch result {
-        case .some:
-            print("입력한 정보는 \(result!.age)세 \(result!.name)(\(result!.number))입니다.")
-        default:
-            print("입력한 정보가 잘못되었습니다. 입력 형식을 확인해주세요.") // *** description
-        //using result-string to print result might be good idea..
+        return telNumber
+    }
+    
+    func isValid() -> String {
+        if self.name == nil {
+            return Validity.noName.output
+        } else if self.age == nil {
+            return Validity.noAge.output
+        } else if self.telNumber == nil {
+            return Validity.noTelNumber.output
+        } else {
+            return Validity.valid(self).output
         }
+    }
+    
+    func toString() -> String {
+        let result = "- \(self.name) / \(self.age) / \(self.telNumber)" ?? ""
         return result
     }
-    
-    static func getMenuInput() -> String? {
-        let userInput = readLine()
-        return userInput ?? nil
+}
+
+
+class InputManager: InputManagable {
+    func toContact(from: String) -> Contact? {
+        let splitted = from.split(separator: "/").map{removeWhiteSpaces($0)}
+        guard splitted.count == 3 else { return nil }
+        let contact = Contact(name: splitted[0], age: splitted[1], telNumber: splitted[2])
+        let validity = contact.isValid()
+        print(validity)
+        if validity == Contact.Validity.valid(contact).output {
+            return contact
+        }
+        return nil
     }
     
-    static func removeWhiteSpaces(_ input: String) -> String {
+    func removeWhiteSpaces(_ input: Substring) -> String {
         return input.replacingOccurrences(of:" ", with:"")
     }
 }
 
-class ContactMenuManager: MenuManager {
-    var isEnd = false
+
+class MenuManager: MenuManagable {
     var contacts: [Contact] = []
-    func printMenu() {
-        print("1) 연락처 추가 2) 연락처 목록보기 3) 연락처 검색 x) 종료\n메뉴를 선택해주세요 : ", terminator:"")
-        let userInput: String? = ContactInputManager.getMenuInput()
-        if let userMenuInput = userInput  {
-            let menuIndex = InputChecker.isMenuNumberCorrect(menuNumber: userMenuInput)
-            switch menuIndex {
-            case "1":
-                addContact()
-            case "2":
-                printAllContacts()
-            case "3":
-                searchContactWithName()
-            case "x":
-                isEnd = true
-            default:
-                print("선택이 잘못되었습니다 확인 후 다시 입력해주세요")
-            }
-        }
-    }
-    func addContact() {
-        if let contact: Contact = ContactInputManager.getContatct() {
-            contacts.append(contact)
-        }
-        contacts = contacts.sorted(by: {$0.name < $1.name })
+    var inputManager: InputManagable = InputManager() //의존성주입은.. 아직 잘 이해못해서..
+    
+    enum Behavior {
+        // 각 잘못된 정보에 대해서 띄워주는 것도 필요함
+        case start, wrongChoice, needContact, needName, noInput, noContacts, programEnd
+        
+        var output: String {
+                    switch self {
+                    case .start:
+                        return "1) 연락처 추가 2) 연락처 목록보기 3) 연락처 검색 x) 종료\n메뉴를 선택해주세요 : "
+                    case .wrongChoice:
+                        return "선택이 잘못되었습니다 확인 후 다시 입력해주세요"
+                    case .needContact:
+                        return "연락처 정보를 입력해주세요 : "
+                    case .needName:
+                        return "연락처에서 찾을 이름을 입력해주세요 : "
+                    case .noInput:
+                        return "아무것도 입력되지 않았습니다. 입력 형식을 확인해주세요."
+                    case .noContacts:
+                        return "연락처가 없습니다."
+                    case .programEnd:
+                        return "[프로그램 종료]"
+                    }
+                }
     }
     
-    func printAllContacts() {
+    func printMenu() -> Bool{
+        print(Behavior.start.output, terminator:"")
+        let userInput: String? = readLine()
+        switch userInput {
+        case "1":
+            addContact()
+        case "2":
+            printAll(contacts: contacts)
+        case "3":
+            searchContactWithName()
+        case "x":
+            print(Behavior.programEnd.output)
+            return false
+        default:
+            print(Behavior.wrongChoice.output)
+        }
+        return true
+    }
+    
+    func addContact() {
+        print(Behavior.needContact.output, terminator:"")
+        guard let userInput: String = readLine() else { print(Behavior.noInput.output); return }
+        if userInput == "" {
+            print(Behavior.noInput.output); return;
+        } // 위의 코드랑 합치고싶음...
+        guard let contact: Contact = inputManager.toContact(from: userInput) else { return }
+        contacts.append(contact)
+        contacts = contacts.sorted(by: { guard let item0 = $0.name, let item1 = $1.name else{ return false }
+            return item0 < item1 })
+    }
+    
+    func printAll(contacts: [Contact]) {
         if contacts.count == 0 {
-            print("연락처가 없습니다.")
+            print(Behavior.noContacts.output)
         }
         for contact:Contact in contacts {
-            print("- \(contact.name) / \(contact.age) / \(contact.number)")
+            print(contact.toString())
         }
     }
     func searchContactWithName() {
-        print("연락처에서 찾을 이름을 입력해주세요 : ", terminator:"")
-            // **** using guard might be good!
-        let inputName = readLine()
-        if let targetName = inputName {
-            for contact:Contact in contacts {
-                if contact.name == targetName {
-                    print("- \(contact.name) / \(contact.age) / \(contact.number)")
-                }
-            }
-        }
+        print(Behavior.needName.output, terminator:"")
+        guard let inputName = readLine() else { print(Behavior.noInput.output); return }
+        let filteredContacts:[Contact] = contacts.filter({
+            (contact: Contact) -> Bool in
+            return contact.name == inputName
+        })
+        printAll(contacts: filteredContacts)
     }
 }
 
-var menuManger: ContactMenuManager = ContactMenuManager()
-while true {
-    menuManger.printMenu()
-    if menuManger.isEnd {
-        break
-    }
-}
+
+let menuManger: MenuManager = MenuManager()
+while menuManger.printMenu() {}
