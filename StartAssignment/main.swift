@@ -151,7 +151,10 @@ class MenuManager: MenuManagable {
         }
         print(Behavior.added(contact).output)
         contacts.append(contact)
-        contacts = contacts.sorted(by: { guard let item0 = $0.name, let item1 = $1.name else{ return false }
+        contacts = contacts.sorted(by: {
+            guard let item0 = $0.name, let item1 = $1.name else {
+                return false
+            }
             return item0 < item1 })
     }
     
