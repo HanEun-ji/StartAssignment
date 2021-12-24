@@ -1,3 +1,5 @@
+// claire !
+
 import Foundation
 
 protocol InputManagable {
